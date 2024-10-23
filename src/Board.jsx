@@ -8,7 +8,7 @@ function Board() {
   const [gameOver, setGameOver] = useState(false);
   const [youWon, setYouWon] = useState(false);
   const boardSize = 25;
-  const numberOfMines = 7;
+  const numberOfMines = 3;
   const rowSize = Math.sqrt(boardSize);
 
   useEffect(() => {
@@ -19,19 +19,34 @@ function Board() {
     }
   }, []);
 
-  const calculateNeighbours = (clickedIndex) => {
-    // Base conditions
-    if (board[clickedIndex].visible || board[clickedIndex].hasMine) {
-      return null;
+  const calculateIndexesToTurnVisible = (clickedIndexes) => {
+    let clickedIndex;
+    const neighboringCellIndexesThatAreZeroes = [];
+    if(Array.isArray(clickedIndexes)){
+      const tempArr = [...clickedIndexes];
+      clickedIndex = tempArr.shift();
+      tempArr.forEach(index => neighboringCellIndexesThatAreZeroes.push(index));
+      
+    }else if(typeof clickedIndexes === "number") {
+      clickedIndex = clickedIndexes;
+    }else {
+      console.error("no type match");
+      return;
     }
-
+    const cellIndexesToTurnVisible = [clickedIndex];
+    if (board[clickedIndex].visible || board[clickedIndex].hasMine) {
+      const temporaryBoard = [...board];
+      temporaryBoard[clickedIndex] = { ...temporaryBoard[clickedIndex], visible: true };
+      setBoard(temporaryBoard);
+      return;
+    }
     const rows = Math.sqrt(boardSize); // Calculate number of rows
-    const cols = rows; // Since it's a square grid, cols = rows
-    const neighbors = [];
+    const columns = rows; // Since it's a square grid, columns = rows
+    const clickedOnAZero = board[clickedIndex].numberOfNeighbouringMines === 0;
 
     // Calculate row and column of the clicked index
-    const row = Math.floor(clickedIndex / cols);
-    const col = clickedIndex % cols;
+    const row = Math.floor(clickedIndex / columns);
+    const column = clickedIndex % columns;
 
     // Define possible directions to check (8 possible directions)
     const directions = [
@@ -45,47 +60,59 @@ function Board() {
       [1, 1], // Bottom-right
     ];
 
-    // Track which cells should be updated
-    const newBoard = [...board];
-
-    // Helper function to process neighbors
-    const processNeighbor = (newIndex) => {
-      if (newBoard[newIndex].hasMine || newBoard[newIndex].visible) {
-        return;
+    const processNeighbor = (neighbourIndex) => {
+      const addToListIfAllIsCorrect = (index) => {
+        const ItIsAlreadyVisible = board[index].visible;
+        const ItHasAMine = board[index].hasMine;
+  
+        if (ItHasAMine || ItIsAlreadyVisible) {
+          //don't continue the cycle and dont make it visible
+        } else {
+          cellIndexesToTurnVisible.push(index);
+        }
       }
-      if (newBoard[newIndex].numberOfNeighbouringMines < 2) {
-        newBoard[newIndex] = { ...newBoard[newIndex], visible: true };
-        neighbors.push(newIndex); // Recursive call
+      const neighbourIndexIsAZero =
+        board[neighbourIndex].numberOfNeighbouringMines === 0;
+      addToListIfAllIsCorrect(neighbourIndex);
+      if (neighbourIndexIsAZero) {
+        console.log("it is a zero");
+        //continue the cycle
+        neighboringCellIndexesThatAreZeroes.push(neighbourIndex);
       }
     };
 
-    // Check each direction
-    directions.forEach(([dRow, dCol]) => {
-      const newRow = row + dRow;
-      const newCol = col + dCol;
+    if (clickedOnAZero) {
+      // Check each direction
+      directions.forEach(([dRow, dCol]) => {
+        const newRow = row + dRow;
+        const newCol = column + dCol;
 
-      // Check if the new row and column are within bounds
-      if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
-        const newIndex = newRow * cols + newCol;
-        processNeighbor(newIndex);
-      }
+        // Check if the new row and column are within bounds
+        if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < columns) {
+          const newIndex = newRow * columns + newCol;
+          processNeighbor(newIndex);
+        }
+      });
+    }
+    const temporaryBoard = [...board];
+    cellIndexesToTurnVisible.forEach((index) => {
+      temporaryBoard[index] = { ...temporaryBoard[index], visible: true };
     });
-
-    // After processing all neighbors, update the board state once
-    setBoard(newBoard);
-
-    return neighbors;
+    setBoard(temporaryBoard);
+    if(neighboringCellIndexesThatAreZeroes.length === 0) {
+      //no need to do anything else
+      return;
+    }
+    //if there are indexes in that array then recursion needs to happen
+    // calculateIndexesToTurnVisible(neighboringCellIndexesThatAreZeroes[0])
+    return;
   };
 
   const handleClick = ({ target }) => {
-    const neighboringCells = calculateNeighbours(target.value);
-    console.log(neighboringCells);
     if (!board[target.value].flagged && !gameOver) {
-      setBoard((prevBoard) => {
-        const newBoard = [...prevBoard];
-        newBoard[target.value] = { ...newBoard[target.value], visible: true };
-        return newBoard;
-      });
+      calculateIndexesToTurnVisible(
+        parseInt(target.value)
+      );
       if (board[target.value].hasMine) {
         setGameOver(true);
       }
@@ -101,9 +128,8 @@ function Board() {
   }, [gameOver]);
   useEffect(() => {
     if (
-      board.filter(
-        (cellInfo) => cellInfo.visible === true || cellInfo.hasMine === true
-      ).length === boardSize &&
+      board.filter((cellInfo) => cellInfo.flagged && cellInfo.hasMine)
+        .length === numberOfMines &&
       !document.querySelector("h4")
     ) {
       const boardDiv = document.querySelector(".board");
