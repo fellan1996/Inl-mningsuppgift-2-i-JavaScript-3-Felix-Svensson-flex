@@ -5,7 +5,7 @@ import ToggleThemeBtn from "./ToggleThemeBtn";
 
 function Board() {
   const boardSize = 25;
-  const numberOfMines = 1;
+  const numberOfMines = 3;
   const [board, setBoard] = useState(() => createBoard(boardSize, numberOfMines));
   const fasterUpdatingBoard = useRef([...board]);
   const [gameOver, setGameOver] = useState(false);
@@ -126,18 +126,26 @@ function Board() {
         .length === boardSize - numberOfMines &&
       !document.querySelector("h4")
     ) {
+      const cellsThatHasAMine = board.filter((cellInfo) => cellInfo.hasMine)
       const boardDiv = document.querySelector(".board");
       const youWonHeadline = document.createElement("h4");
       youWonHeadline.innerHTML = "You did it!";
       boardDiv.before(youWonHeadline);
       setYouWon(true);
+      const tempBoard = [...board];
+      console.log(cellsThatHasAMine)
+      cellsThatHasAMine.forEach(cellInfo => {
+        tempBoard[cellInfo.index] = { ...tempBoard[cellInfo.index], flagged: true}
+      })
+      console.log(tempBoard);
+      setBoard(tempBoard);
     }
   }, [board]);
 
   const handleRightClick = (event) => {
     event.preventDefault();
     const cellIndex = event.target.value;
-    if (cellIndex && !gameOver) {
+    if (cellIndex && !gameOver && !youWon) {
       setBoard((prevBoard) => {
         const newBoard = [...prevBoard];
         newBoard[cellIndex] = {
