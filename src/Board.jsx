@@ -5,7 +5,7 @@ import ToggleThemeBtn from "./ToggleThemeBtn";
 
 function Board() {
   const boardSize = 25;
-  const numberOfMines = 3;
+  const numberOfMines = 1;
   const [board, setBoard] = useState(() => createBoard(boardSize, numberOfMines));
   const fasterUpdatingBoard = useRef([...board]);
   const [gameOver, setGameOver] = useState(false);
@@ -67,7 +67,7 @@ function Board() {
     const processNeighbor = (neighbourIndex) => {
       const neighbourIndexIsAZero =
       fasterUpdatingBoard.current[neighbourIndex].numberOfNeighbouringMines === 0;
-      if (neighbourIndexIsAZero && addToListIfAllIsCorrect(neighbourIndex)) {
+      if (addToListIfAllIsCorrect(neighbourIndex) && neighbourIndexIsAZero ) {
         // debugger
         console.log("zero");
         //continue the cycle
@@ -122,8 +122,8 @@ function Board() {
   }, [gameOver]);
   useEffect(() => {
     if (
-      board.filter((cellInfo) => cellInfo.flagged && cellInfo.hasMine)
-        .length === numberOfMines &&
+      board.filter((cellInfo) => cellInfo.visible)
+        .length === boardSize - numberOfMines &&
       !document.querySelector("h4")
     ) {
       const boardDiv = document.querySelector(".board");
