@@ -5,7 +5,7 @@ import ToggleThemeBtn from "./ToggleThemeBtn";
 
 function Board() {
   const boardSize = 25;
-  const numberOfMines = 1;
+  const numberOfMines = 7;
   const [board, setBoard] = useState(() =>
     createBoard(boardSize, numberOfMines)
   );
@@ -71,7 +71,6 @@ function Board() {
     ];
 
     const processNeighbor = (neighbourIndex) => {
-      console.log("hi");
       const neighbourIndexIsAZero =
         fasterUpdatingBoard.current[neighbourIndex]
           .numberOfNeighbouringMines === 0;
