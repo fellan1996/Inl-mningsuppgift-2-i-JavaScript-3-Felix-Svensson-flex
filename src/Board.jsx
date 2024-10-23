@@ -1,28 +1,37 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import createBoard from "./utils"; // Import your utility function
 import Cell from "./Cell"; // Import the Cell component
 import ToggleThemeBtn from "./ToggleThemeBtn";
 
 function Board() {
-  const [board, setBoard] = useState([]);
-  const [gameOver, setGameOver] = useState(false);
-  const [youWon, setYouWon] = useState(false);
   const boardSize = 25;
   const numberOfMines = 3;
+  const [board, setBoard] = useState(() => createBoard(boardSize, numberOfMines));
+  const fasterUpdatingBoard = useRef([...board]);
+  const [gameOver, setGameOver] = useState(false);
+  const [youWon, setYouWon] = useState(false);
   const rowSize = Math.sqrt(boardSize);
 
-  useEffect(() => {
-    // Initialize the board when the component mounts
-    if (board.length === 0) {
-      const newBoard = createBoard(boardSize, numberOfMines);
-      setBoard(newBoard);
-    }
-  }, []);
-
   const calculateIndexesToTurnVisible = (clickedIndexes) => {
+    const addToListIfAllIsCorrect = (index) => {
+      let turnedVisible = false;
+      const ItIsAlreadyVisible = fasterUpdatingBoard.current[index].visible;
+      const ItHasAMine = fasterUpdatingBoard.current[index].hasMine;
+
+      if (ItHasAMine || ItIsAlreadyVisible) {
+        //don't continue the cycle and dont make it visible
+      } else {
+        turnedVisible = true;
+        const updatedCell = { ...fasterUpdatingBoard.current[index], visible: true };
+        fasterUpdatingBoard.current[index] = updatedCell;
+        setBoard(fasterUpdatingBoard.current);
+      }
+      console.log("turnedVisible", turnedVisible);
+      return turnedVisible;
+    }
     let clickedIndex;
     const neighboringCellIndexesThatAreZeroes = [];
-    if(Array.isArray(clickedIndexes)){
+    if(clickedIndexes instanceof Set){
       const tempArr = [...clickedIndexes];
       clickedIndex = tempArr.shift();
       tempArr.forEach(index => neighboringCellIndexesThatAreZeroes.push(index));
@@ -33,16 +42,11 @@ function Board() {
       console.error("no type match");
       return;
     }
-    const cellIndexesToTurnVisible = [clickedIndex];
-    if (board[clickedIndex].visible || board[clickedIndex].hasMine) {
-      const temporaryBoard = [...board];
-      temporaryBoard[clickedIndex] = { ...temporaryBoard[clickedIndex], visible: true };
-      setBoard(temporaryBoard);
-      return;
-    }
+
+    addToListIfAllIsCorrect(clickedIndex);
     const rows = Math.sqrt(boardSize); // Calculate number of rows
     const columns = rows; // Since it's a square grid, columns = rows
-    const clickedOnAZero = board[clickedIndex].numberOfNeighbouringMines === 0;
+    const clickedOnAZero = fasterUpdatingBoard.current[clickedIndex].numberOfNeighbouringMines === 0;
 
     // Calculate row and column of the clicked index
     const row = Math.floor(clickedIndex / columns);
@@ -61,21 +65,11 @@ function Board() {
     ];
 
     const processNeighbor = (neighbourIndex) => {
-      const addToListIfAllIsCorrect = (index) => {
-        const ItIsAlreadyVisible = board[index].visible;
-        const ItHasAMine = board[index].hasMine;
-  
-        if (ItHasAMine || ItIsAlreadyVisible) {
-          //don't continue the cycle and dont make it visible
-        } else {
-          cellIndexesToTurnVisible.push(index);
-        }
-      }
       const neighbourIndexIsAZero =
-        board[neighbourIndex].numberOfNeighbouringMines === 0;
-      addToListIfAllIsCorrect(neighbourIndex);
-      if (neighbourIndexIsAZero) {
-        console.log("it is a zero");
+      fasterUpdatingBoard.current[neighbourIndex].numberOfNeighbouringMines === 0;
+      if (neighbourIndexIsAZero && addToListIfAllIsCorrect(neighbourIndex)) {
+        // debugger
+        console.log("zero");
         //continue the cycle
         neighboringCellIndexesThatAreZeroes.push(neighbourIndex);
       }
@@ -94,27 +88,27 @@ function Board() {
         }
       });
     }
-    const temporaryBoard = [...board];
-    cellIndexesToTurnVisible.forEach((index) => {
-      temporaryBoard[index] = { ...temporaryBoard[index], visible: true };
-    });
-    setBoard(temporaryBoard);
     if(neighboringCellIndexesThatAreZeroes.length === 0) {
       //no need to do anything else
       return;
     }
     //if there are indexes in that array then recursion needs to happen
-    // calculateIndexesToTurnVisible(neighboringCellIndexesThatAreZeroes[0])
+    calculateIndexesToTurnVisible(new Set(neighboringCellIndexesThatAreZeroes));
     return;
   };
 
   const handleClick = ({ target }) => {
-    if (!board[target.value].flagged && !gameOver) {
-      calculateIndexesToTurnVisible(
-        parseInt(target.value)
-      );
-      if (board[target.value].hasMine) {
+    const temporaryBoard = [...board];
+    if (!fasterUpdatingBoard.current[target.value].flagged && !gameOver && !youWon && !fasterUpdatingBoard.current[target.value].visible) {
+      if ( fasterUpdatingBoard.current[target.value].hasMine) {
+        temporaryBoard[target.value] = { ...temporaryBoard[target.value], visible: true };
+        setBoard(temporaryBoard);
         setGameOver(true);
+      }else {
+        fasterUpdatingBoard.current = [...temporaryBoard];
+        calculateIndexesToTurnVisible(
+          parseInt(target.value)
+        );
       }
     }
   };
