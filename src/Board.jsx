@@ -5,8 +5,10 @@ import ToggleThemeBtn from "./ToggleThemeBtn";
 
 function Board() {
   const boardSize = 25;
-  const numberOfMines = 3;
-  const [board, setBoard] = useState(() => createBoard(boardSize, numberOfMines));
+  const numberOfMines = 1;
+  const [board, setBoard] = useState(() =>
+    createBoard(boardSize, numberOfMines)
+  );
   const fasterUpdatingBoard = useRef([...board]);
   const [gameOver, setGameOver] = useState(false);
   const [youWon, setYouWon] = useState(false);
@@ -22,23 +24,26 @@ function Board() {
         //don't continue the cycle and dont make it visible
       } else {
         turnedVisible = true;
-        const updatedCell = { ...fasterUpdatingBoard.current[index], visible: true };
+        const updatedCell = {
+          ...fasterUpdatingBoard.current[index],
+          visible: true,
+        };
         fasterUpdatingBoard.current[index] = updatedCell;
         setBoard(fasterUpdatingBoard.current);
       }
-      console.log("turnedVisible", turnedVisible);
       return turnedVisible;
-    }
+    };
     let clickedIndex;
     const neighboringCellIndexesThatAreZeroes = [];
-    if(clickedIndexes instanceof Set){
+    if (clickedIndexes instanceof Set) {
       const tempArr = [...clickedIndexes];
       clickedIndex = tempArr.shift();
-      tempArr.forEach(index => neighboringCellIndexesThatAreZeroes.push(index));
-      
-    }else if(typeof clickedIndexes === "number") {
+      tempArr.forEach((index) =>
+        neighboringCellIndexesThatAreZeroes.push(index)
+      );
+    } else if (typeof clickedIndexes === "number") {
       clickedIndex = clickedIndexes;
-    }else {
+    } else {
       console.error("no type match");
       return;
     }
@@ -46,7 +51,8 @@ function Board() {
     addToListIfAllIsCorrect(clickedIndex);
     const rows = Math.sqrt(boardSize); // Calculate number of rows
     const columns = rows; // Since it's a square grid, columns = rows
-    const clickedOnAZero = fasterUpdatingBoard.current[clickedIndex].numberOfNeighbouringMines === 0;
+    const clickedOnAZero =
+      fasterUpdatingBoard.current[clickedIndex].numberOfNeighbouringMines === 0;
 
     // Calculate row and column of the clicked index
     const row = Math.floor(clickedIndex / columns);
@@ -65,11 +71,11 @@ function Board() {
     ];
 
     const processNeighbor = (neighbourIndex) => {
+      console.log("hi");
       const neighbourIndexIsAZero =
-      fasterUpdatingBoard.current[neighbourIndex].numberOfNeighbouringMines === 0;
-      if (addToListIfAllIsCorrect(neighbourIndex) && neighbourIndexIsAZero ) {
-        // debugger
-        console.log("zero");
+        fasterUpdatingBoard.current[neighbourIndex]
+          .numberOfNeighbouringMines === 0;
+      if (addToListIfAllIsCorrect(neighbourIndex) && neighbourIndexIsAZero) {
         //continue the cycle
         neighboringCellIndexesThatAreZeroes.push(neighbourIndex);
       }
@@ -84,11 +90,12 @@ function Board() {
         // Check if the new row and column are within bounds
         if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < columns) {
           const newIndex = newRow * columns + newCol;
-          processNeighbor(newIndex);
+          if (!fasterUpdatingBoard.current[newIndex].visible)
+            processNeighbor(newIndex);
         }
       });
     }
-    if(neighboringCellIndexesThatAreZeroes.length === 0) {
+    if (neighboringCellIndexesThatAreZeroes.length === 0) {
       //no need to do anything else
       return;
     }
@@ -99,16 +106,22 @@ function Board() {
 
   const handleClick = ({ target }) => {
     const temporaryBoard = [...board];
-    if (!fasterUpdatingBoard.current[target.value].flagged && !gameOver && !youWon && !fasterUpdatingBoard.current[target.value].visible) {
-      if ( fasterUpdatingBoard.current[target.value].hasMine) {
-        temporaryBoard[target.value] = { ...temporaryBoard[target.value], visible: true };
+    if (
+      !fasterUpdatingBoard.current[target.value].flagged &&
+      !gameOver &&
+      !youWon &&
+      !fasterUpdatingBoard.current[target.value].visible
+    ) {
+      if (fasterUpdatingBoard.current[target.value].hasMine) {
+        temporaryBoard[target.value] = {
+          ...temporaryBoard[target.value],
+          visible: true,
+        };
         setBoard(temporaryBoard);
         setGameOver(true);
-      }else {
+      } else {
         fasterUpdatingBoard.current = [...temporaryBoard];
-        calculateIndexesToTurnVisible(
-          parseInt(target.value)
-        );
+        calculateIndexesToTurnVisible(parseInt(target.value));
       }
     }
   };
@@ -122,22 +135,23 @@ function Board() {
   }, [gameOver]);
   useEffect(() => {
     if (
-      board.filter((cellInfo) => cellInfo.visible)
-        .length === boardSize - numberOfMines &&
+      board.filter((cellInfo) => cellInfo.visible).length ===
+        boardSize - numberOfMines &&
       !document.querySelector("h4")
     ) {
-      const cellsThatHasAMine = board.filter((cellInfo) => cellInfo.hasMine)
+      const cellsThatHasAMine = board.filter((cellInfo) => cellInfo.hasMine);
       const boardDiv = document.querySelector(".board");
       const youWonHeadline = document.createElement("h4");
       youWonHeadline.innerHTML = "You did it!";
       boardDiv.before(youWonHeadline);
       setYouWon(true);
       const tempBoard = [...board];
-      console.log(cellsThatHasAMine)
-      cellsThatHasAMine.forEach(cellInfo => {
-        tempBoard[cellInfo.index] = { ...tempBoard[cellInfo.index], flagged: true}
-      })
-      console.log(tempBoard);
+      cellsThatHasAMine.forEach((cellInfo) => {
+        tempBoard[cellInfo.index] = {
+          ...tempBoard[cellInfo.index],
+          flagged: true,
+        };
+      });
       setBoard(tempBoard);
     }
   }, [board]);
